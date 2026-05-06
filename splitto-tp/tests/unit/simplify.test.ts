@@ -20,4 +20,21 @@ describe('simplifyDebts', () => {
       { from: 'c', to: 'a', amount: 10 },
     ]);
   });
+
+  it('retourne une liste vide si les comptes sont déjà équilibrés', () => {
+    expect(simplifyDebts({ a: 0, b: 0, c: 0 })).toEqual([]);
+  });
+
+  it('gère les montants avec centimes sans perdre de précision', () => {
+    expect(simplifyDebts({ alice: 66.67, bob: -33.33, chloe: -33.34 })).toEqual([
+      { from: 'bob', to: 'alice', amount: 33.33 },
+      { from: 'chloe', to: 'alice', amount: 33.34 },
+    ]);
+  });
+
+  it('ignore les micro-écarts flottants proches de zéro', () => {
+    expect(simplifyDebts({ a: 10.0000001, b: -10, c: -0.0000001 })).toEqual([
+      { from: 'b', to: 'a', amount: 10 },
+    ]);
+  });
 });
