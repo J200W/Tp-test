@@ -10,17 +10,34 @@
 import type { Balances, Settlement } from './types';
 
 export function simplifyDebts(balances: Balances): Settlement[] {
-  const creditor = Object.entries(balances).find(([, amount]) => amount > 0);
-  const debtor = Object.entries(balances).find(([, amount]) => amount < 0);
+  const creditors = Object.entries(balances)
+    .filter(([, amount]) => amount > 0)
+    .map(([memberId, amount]) => ({ memberId, amount }));
+  const debtors = Object.entries(balances)
+    .filter(([, amount]) => amount < 0)
+    .map(([memberId, amount]) => ({ memberId, amount: -amount }));
 
-  if (creditor && debtor) {
-    return [
-      {
-        from: debtor[0],
-        to: creditor[0],
-        amount: Math.min(creditor[1], -debtor[1]),
-      },
-    ];
+  const settlements: Settlement[] = [];
+  let i = 0;
+  let j = 0;
+
+  while (i < creditors.length && j < debtors.length) {
+    const creditor = creditors[i];
+    const debtor = debtors[j];
+    const transfer = Math.min(creditor.amount, debtor.amount);
+
+    settlements.push({
+      from: debtor.memberId,
+      to: creditor.memberId,
+      amount: Number(transfer.toFixed(2)),
+    });
+
+    creditor.amount = Number((creditor.amount - transfer).toFixed(2));
+    debtor.amount = Number((debtor.amount - transfer).toFixed(2));
+
+    if (creditor.amount === 0) i += 1;
+    if (debtor.amount === 0) j += 1;
   }
-  return [];
+
+  return settlements;
 }
