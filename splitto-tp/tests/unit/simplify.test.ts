@@ -27,8 +27,8 @@ describe('simplifyDebts', () => {
 
   it('gère les montants avec centimes sans perdre de précision', () => {
     expect(simplifyDebts({ alice: 66.67, bob: -33.33, chloe: -33.34 })).toEqual([
-      { from: 'bob', to: 'alice', amount: 33.33 },
       { from: 'chloe', to: 'alice', amount: 33.34 },
+      { from: 'bob', to: 'alice', amount: 33.33 },
     ]);
   });
 
