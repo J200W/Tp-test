@@ -12,10 +12,13 @@ import type { Balances, Settlement } from './types';
 export function simplifyDebts(balances: Balances): Settlement[] {
   const creditors = Object.entries(balances)
     .filter(([, amount]) => amount > 0)
-    .map(([memberId, amount]) => ({ memberId, amount }));
+    .map(([memberId, amount]) => ({ memberId, amountInCents: toCents(amount) }));
   const debtors = Object.entries(balances)
     .filter(([, amount]) => amount < 0)
-    .map(([memberId, amount]) => ({ memberId, amount: -amount }));
+    .map(([memberId, amount]) => ({ memberId, amountInCents: toCents(-amount) }));
+
+  creditors.sort((a, b) => b.amountInCents - a.amountInCents);
+  debtors.sort((a, b) => b.amountInCents - a.amountInCents);
 
   const settlements: Settlement[] = [];
   let i = 0;
@@ -24,20 +27,28 @@ export function simplifyDebts(balances: Balances): Settlement[] {
   while (i < creditors.length && j < debtors.length) {
     const creditor = creditors[i];
     const debtor = debtors[j];
-    const transfer = Math.min(creditor.amount, debtor.amount);
+    const transfer = Math.min(creditor.amountInCents, debtor.amountInCents);
 
     settlements.push({
       from: debtor.memberId,
       to: creditor.memberId,
-      amount: Number(transfer.toFixed(2)),
+      amount: centsToAmount(transfer),
     });
 
-    creditor.amount = Number((creditor.amount - transfer).toFixed(2));
-    debtor.amount = Number((debtor.amount - transfer).toFixed(2));
+    creditor.amountInCents -= transfer;
+    debtor.amountInCents -= transfer;
 
-    if (creditor.amount === 0) i += 1;
-    if (debtor.amount === 0) j += 1;
+    if (creditor.amountInCents === 0) i += 1;
+    if (debtor.amountInCents === 0) j += 1;
   }
 
   return settlements;
+}
+
+function toCents(amount: number): number {
+  return Math.round(amount * 100);
+}
+
+function centsToAmount(cents: number): number {
+  return Number((cents / 100).toFixed(2));
 }
