@@ -4,17 +4,19 @@
 
 import express from 'express';
 import { Pool } from 'pg';
+
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { computeBalances } from './domain/balances';
 import { simplifyDebts } from './domain/simplify';
 import { PgExpenseRepository } from './infrastructure/pg-expense.repository';
-import type { Group, Member } from './domain/types';
+import type { Group } from './domain/types';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 export function createApp(pool: Pool) {
   const app = express();
+  
   app.use(express.json());
   app.use(express.static(join(__dirname, '..', 'frontend')));
 
@@ -83,31 +85,39 @@ export function createApp(pool: Pool) {
   });
 
   app.get('/api/groups/:groupId/expenses', async (req, res) => {
-    const expenses = await repo.findByGroupId(req.params.groupId);
-    res.json(expenses);
+    try {
+      const expenses = await repo.findByGroupId(req.params.groupId);
+      res.json(expenses);
+    } catch (err: any) {
+      res.status(500).json({ error: err?.message ?? 'Internal server error' });
+    }
   });
 
   // ─── Balances ──────────────────────────────────────────────
   app.get('/api/groups/:id/balances', async (req, res) => {
-    const groupResult = await pool.query(
-      'SELECT id, name, currency FROM groups WHERE id = $1',
-      [req.params.id],
-    );
-    if (groupResult.rows.length === 0) {
-      return res.status(404).json({ error: 'Group not found' });
+    try {
+      const groupResult = await pool.query(
+        'SELECT id, name, currency FROM groups WHERE id = $1',
+        [req.params.id],
+      );
+      if (groupResult.rows.length === 0) {
+        return res.status(404).json({ error: 'Group not found' });
+      }
+      const groupRow = groupResult.rows[0];
+      const membersResult = await pool.query(
+        'SELECT id, name, email FROM members WHERE group_id = $1',
+        [req.params.id],
+      );
+      const group: Group = { ...groupRow, members: membersResult.rows };
+
+      const expenses = await repo.findByGroupId(req.params.id);
+      const balances = computeBalances(group, expenses);
+      const settlements = simplifyDebts(balances);
+
+      res.json({ groupId: req.params.id, balances, settlements });
+    } catch (err: any) {
+      res.status(500).json({ error: err?.message ?? 'Internal server error' });
     }
-    const groupRow = groupResult.rows[0];
-    const membersResult = await pool.query(
-      'SELECT id, name, email FROM members WHERE group_id = $1',
-      [req.params.id],
-    );
-    const group: Group = { ...groupRow, members: membersResult.rows };
-
-    const expenses = await repo.findByGroupId(req.params.id);
-    const balances = computeBalances(group, expenses);
-    const settlements = simplifyDebts(balances);
-
-    res.json({ groupId: req.params.id, balances, settlements });
   });
 
   // ─── Test reset (pour E2E uniquement) ──────────────────────
