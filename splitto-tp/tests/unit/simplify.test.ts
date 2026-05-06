@@ -13,4 +13,11 @@ describe('simplifyDebts', () => {
       { from: 'c', to: 'a', amount: 10 },
     ]);
   });
+
+  it('retourne 2 règlements minimum pour un cas à 4 personnes', () => {
+    expect(simplifyDebts({ a: 30, b: -20, c: -10, d: 0 })).toEqual([
+      { from: 'b', to: 'a', amount: 20 },
+      { from: 'c', to: 'a', amount: 10 },
+    ]);
+  });
 });
