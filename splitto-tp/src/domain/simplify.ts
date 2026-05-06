@@ -10,12 +10,8 @@
 import type { Balances, Settlement } from './types';
 
 export function simplifyDebts(balances: Balances): Settlement[] {
-  const creditors = Object.entries(balances)
-    .filter(([, amount]) => amount > 0)
-    .map(([memberId, amount]) => ({ memberId, amountInCents: toCents(amount) }));
-  const debtors = Object.entries(balances)
-    .filter(([, amount]) => amount < 0)
-    .map(([memberId, amount]) => ({ memberId, amountInCents: toCents(-amount) }));
+  const creditors = buildParticipants(balances, 'creditor');
+  const debtors = buildParticipants(balances, 'debtor');
 
   creditors.sort((a, b) => b.amountInCents - a.amountInCents);
   debtors.sort((a, b) => b.amountInCents - a.amountInCents);
@@ -51,4 +47,16 @@ function toCents(amount: number): number {
 
 function centsToAmount(cents: number): number {
   return Number((cents / 100).toFixed(2));
+}
+
+function buildParticipants(
+  balances: Balances,
+  kind: 'creditor' | 'debtor',
+): Array<{ memberId: string; amountInCents: number }> {
+  return Object.entries(balances)
+    .filter(([, amount]) => (kind === 'creditor' ? amount > 0 : amount < 0))
+    .map(([memberId, amount]) => ({
+      memberId,
+      amountInCents: toCents(kind === 'creditor' ? amount : -amount),
+    }));
 }
