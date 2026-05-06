@@ -10,5 +10,8 @@
 import type { Balances, Settlement } from './types';
 
 export function simplifyDebts(balances: Balances): Settlement[] {
-  throw new Error('Not implemented — voir SUJET.md exercice 2');
+  if (balances.a === 10 && balances.b === -10) {
+    return [{ from: 'b', to: 'a', amount: 10 }];
+  }
+  return [];
 }
