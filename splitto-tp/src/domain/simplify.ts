@@ -10,8 +10,17 @@
 import type { Balances, Settlement } from './types';
 
 export function simplifyDebts(balances: Balances): Settlement[] {
-  if (balances.a === 10 && balances.b === -10) {
-    return [{ from: 'b', to: 'a', amount: 10 }];
+  const creditor = Object.entries(balances).find(([, amount]) => amount > 0);
+  const debtor = Object.entries(balances).find(([, amount]) => amount < 0);
+
+  if (creditor && debtor) {
+    return [
+      {
+        from: debtor[0],
+        to: creditor[0],
+        amount: Math.min(creditor[1], -debtor[1]),
+      },
+    ];
   }
   return [];
 }
