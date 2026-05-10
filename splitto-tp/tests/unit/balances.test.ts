@@ -175,4 +175,164 @@ describe('computeBalances', () => {
             'percentage split must sum to 100',
         );
     });
+
+    it('répartit le centime résiduel selon la plus grande fraction en weighted', () => {
+        const expense = makeExpense({
+            amount: 10,
+            paidBy: 'alice',
+            split: { mode: 'weighted', weights: { alice: 2, bob: 1, chloe: 3 } },
+        });
+
+        const balances = computeBalances(group, [expense]);
+        expect(balances).toEqual({
+            alice: 6.67,
+            bob: -1.67,
+            chloe: -5,
+        });
+        expectSumIsZero(balances);
+    });
+
+    it('rejette un split equal sans bénéficiaire', () => {
+        const expense = makeExpense({
+            amount: 10,
+            split: { mode: 'equal', beneficiaries: [] },
+        });
+
+        expect(() => computeBalances(group, [expense])).toThrow(
+            'equal split requires at least one beneficiary',
+        );
+    });
+
+    it('rejette un split weighted avec poids négatif', () => {
+        const expense = makeExpense({
+            amount: 10,
+            split: { mode: 'weighted', weights: { alice: 1, bob: -1 } },
+        });
+
+        expect(() => computeBalances(group, [expense])).toThrow(
+            'weighted split requires positive weights',
+        );
+    });
+
+    it('rejette un split weighted avec un poids à zéro', () => {
+        const expense = makeExpense({
+            amount: 10,
+            split: { mode: 'weighted', weights: { alice: 1, bob: 0 } },
+        });
+
+        expect(() => computeBalances(group, [expense])).toThrow(
+            'weighted split requires positive weights',
+        );
+    });
+
+    it('rejette un split weighted sans aucun bénéficiaire', () => {
+        const expense = makeExpense({
+            amount: 10,
+            split: { mode: 'weighted', weights: {} },
+        });
+
+        expect(() => computeBalances(group, [expense])).toThrow(
+            'weighted split requires at least one beneficiary',
+        );
+    });
+
+    it('rejette un split percentage avec un pourcentage à zéro', () => {
+        const expense = makeExpense({
+            amount: 100,
+            paidBy: 'alice',
+            split: {
+                mode: 'percentage',
+                percentages: { alice: 50, bob: 50, chloe: 0 },
+            },
+        });
+
+        expect(() => computeBalances(group, [expense])).toThrow(
+            'percentage split requires positive percentages',
+        );
+    });
+
+    it('rejette un split percentage sans aucune ligne', () => {
+        const expense = makeExpense({
+            amount: 100,
+            split: { mode: 'percentage', percentages: {} },
+        });
+
+        expect(() => computeBalances(group, [expense])).toThrow(
+            'percentage split requires at least one beneficiary',
+        );
+    });
+
+    it('attribue un centime en cas d égalité des fractions selon l ordre des bénéficiaires', () => {
+        const expense = makeExpense({
+            amount: 0.01,
+            paidBy: 'alice',
+            split: { mode: 'equal', beneficiaries: ['chloe', 'alice', 'bob'] },
+        });
+
+        const balances = computeBalances(group, [expense]);
+        expect(balances).toEqual({
+            alice: 0.01,
+            bob: 0,
+            chloe: -0.01,
+        });
+        expectSumIsZero(balances);
+    });
+
+    it('retourne un objet vide pour un groupe sans aucun membre', () => {
+        const emptyGroup: Group = {
+            id: 'empty',
+            name: 'Vide',
+            currency: 'EUR',
+            members: [],
+        };
+
+        expect(computeBalances(emptyGroup, [])).toEqual({});
+    });
+
+    it('calcule une dépense equal avec un seul bénéficiaire égal au payeur', () => {
+        const soloGroup: Group = {
+            id: 'solo',
+            name: 'Solo',
+            currency: 'EUR',
+            members: [{ id: 'alice', name: 'Alice', email: 'alice@example.com' }],
+        };
+
+        const expense = makeExpense({
+            groupId: soloGroup.id,
+            amount: 100,
+            paidBy: 'alice',
+            split: { mode: 'equal', beneficiaries: ['alice'] },
+        });
+
+        expect(computeBalances(soloGroup, [expense])).toEqual({ alice: 0 });
+    });
+
+    it('répartit une dépense equal sur plus de 10 membres', () => {
+        const manyMembers: Member[] = Array.from({ length: 11 }, (_, i) => ({
+            id: `m${i}`,
+            name: `Member ${i}`,
+            email: `m${i}@example.com`,
+        }));
+
+        const bigGroup: Group = {
+            id: 'big',
+            name: 'Big trip',
+            currency: 'EUR',
+            members: manyMembers,
+        };
+
+        const expense = makeExpense({
+            groupId: bigGroup.id,
+            amount: 110,
+            paidBy: 'm0',
+            split: { mode: 'equal', beneficiaries: manyMembers.map((m) => m.id) },
+        });
+
+        const balances = computeBalances(bigGroup, [expense]);
+        expect(balances.m0).toBe(100);
+        for (let i = 1; i <= 10; i += 1) {
+            expect(balances[`m${i}`]).toBe(-10);
+        }
+        expectSumIsZero(balances);
+    });
 });
