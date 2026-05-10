@@ -72,4 +72,21 @@ describe('simplifyDebts', () => {
       'balances must contain finite numbers',
     );
   });
+
+  it('réduit à quatre règlements un cas à cinq personnes (2 créditeurs, 3 débiteurs)', () => {
+    expect(simplifyDebts({ a: 15, b: 5, c: -12, d: -5, e: -3 })).toEqual([
+      { from: 'c', to: 'a', amount: 12 },
+      { from: 'd', to: 'a', amount: 3 },
+      { from: 'd', to: 'b', amount: 2 },
+      { from: 'e', to: 'b', amount: 3 },
+    ]);
+  });
+
+  it('regroupe trois débiteurs vers un seul créditeur', () => {
+    expect(simplifyDebts({ a: 100, b: -40, c: -35, d: -25 })).toEqual([
+      { from: 'b', to: 'a', amount: 40 },
+      { from: 'c', to: 'a', amount: 35 },
+      { from: 'd', to: 'a', amount: 25 },
+    ]);
+  });
 });
