@@ -37,4 +37,30 @@ describe('simplifyDebts', () => {
       { from: 'b', to: 'a', amount: 10 },
     ]);
   });
+
+  it('gère un cas avec deux créditeurs et deux débiteurs', () => {
+    expect(simplifyDebts({ a: 10, d: 5, b: -12, c: -3 })).toEqual([
+      { from: 'b', to: 'a', amount: 10 },
+      { from: 'b', to: 'd', amount: 2 },
+      { from: 'c', to: 'd', amount: 3 },
+    ]);
+  });
+
+  it('trie les créditeurs par montant décroissant avant les règlements', () => {
+    expect(simplifyDebts({ a: 5, d: 10, b: -12, c: -3 })).toEqual([
+      { from: 'b', to: 'd', amount: 10 },
+      { from: 'b', to: 'a', amount: 2 },
+      { from: 'c', to: 'a', amount: 3 },
+    ]);
+  });
+
+  it('ne génère jamais de règlement à 0', () => {
+    const settlements = simplifyDebts({ a: 20, b: 0, c: -20, d: 0 });
+    expect(settlements).toEqual([{ from: 'c', to: 'a', amount: 20 }]);
+    expect(settlements.every((s) => s.amount > 0)).toBe(true);
+  });
+
+  it('rejette une carte de soldes dont la somme globale n’est pas nulle', () => {
+    expect(() => simplifyDebts({ a: 10, b: -5 })).toThrow('balances must sum to zero');
+  });
 });
