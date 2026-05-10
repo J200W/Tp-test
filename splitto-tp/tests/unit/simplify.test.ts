@@ -68,5 +68,8 @@ describe('simplifyDebts', () => {
     expect(() => simplifyDebts({ a: 10, b: Number.NaN })).toThrow(
       'balances must contain finite numbers',
     );
+    expect(() => simplifyDebts({ a: 10, b: Number.POSITIVE_INFINITY })).toThrow(
+      'balances must contain finite numbers',
+    );
   });
 });

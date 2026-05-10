@@ -43,9 +43,16 @@ export function simplifyDebts(balances: Balances): Settlement[] {
   return settlements;
 }
 
-/** Tolérance ~ 2 centimes pour les erreurs d’arrondi flottant sur la somme des soldes. */
+/** Contrôle des entrées avant simplification (sommes cohérentes en euros). */
 function assertBalancesConsistent(balances: Balances): void {
+  for (const value of Object.values(balances)) {
+    if (!Number.isFinite(value)) {
+      throw new Error('balances must contain finite numbers');
+    }
+  }
+
   const sum = Object.values(balances).reduce((s, value) => s + value, 0);
+  /** Tolérance ~ 2 centimes pour les erreurs d’arrondi flottant sur la somme des soldes. */
   if (Math.abs(sum) > 0.02) {
     throw new Error('balances must sum to zero');
   }
