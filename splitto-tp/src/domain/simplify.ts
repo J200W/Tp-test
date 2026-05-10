@@ -10,6 +10,8 @@
 import type { Balances, Settlement } from './types';
 
 export function simplifyDebts(balances: Balances): Settlement[] {
+  assertBalancesConsistent(balances);
+
   const creditors = buildParticipants(balances, 'creditor');
   const debtors = buildParticipants(balances, 'debtor');
 
@@ -39,6 +41,14 @@ export function simplifyDebts(balances: Balances): Settlement[] {
   }
 
   return settlements;
+}
+
+/** Tolérance ~ 2 centimes pour les erreurs d’arrondi flottant sur la somme des soldes. */
+function assertBalancesConsistent(balances: Balances): void {
+  const sum = Object.values(balances).reduce((s, value) => s + value, 0);
+  if (Math.abs(sum) > 0.02) {
+    throw new Error('balances must sum to zero');
+  }
 }
 
 function toCents(amount: number): number {
