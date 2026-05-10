@@ -63,4 +63,10 @@ describe('simplifyDebts', () => {
   it('rejette une carte de soldes dont la somme globale n’est pas nulle', () => {
     expect(() => simplifyDebts({ a: 10, b: -5 })).toThrow('balances must sum to zero');
   });
+
+  it('rejette une carte de soldes contenant NaN ou Infinity', () => {
+    expect(() => simplifyDebts({ a: 10, b: Number.NaN })).toThrow(
+      'balances must contain finite numbers',
+    );
+  });
 });
